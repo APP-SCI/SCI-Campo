@@ -1375,7 +1375,8 @@ Responde SOLO con JSON válido con esta forma:
       if (res.status === 404) throw Object.assign(aiError(`El modelo "${mdl}" no está disponible para su clave.`, m), { code: 404 });
       if (res.status === 400 && /api key|API_KEY/i.test(m)) throw aiError('La clave de API no es válida. Cópiela de nuevo desde aistudio.google.com/apikey, sin espacios.', m);
       if (res.status === 403) throw aiError('La clave no tiene permiso para la API de Gemini. En AI Studio cree la clave en un proyecto con la API "Generative Language" habilitada.', m);
-      if (res.status === 429) throw aiError('Se alcanzó el límite gratuito de uso. Espere uno o dos minutos e intente de nuevo.', m);
+      if (res.status === 429) throw Object.assign(aiError('Se alcanzó el límite gratuito de uso de todos los modelos disponibles. Espere uno o dos minutos e intente de nuevo.', m), { code: 429 });
+      if (res.status === 503 || res.status === 500 || res.status === 502 || res.status === 504) throw Object.assign(aiError('Los servidores gratuitos de Google están saturados en este momento. Intente de nuevo en unos minutos.', m), { code: 503 });
       if (/location|region|country/i.test(m)) throw aiError('El servicio gratuito de Gemini no está disponible en esta región o cuenta.', m);
       throw aiError(`Google respondió con error ${res.status} ${st}.`, m);
     }
@@ -1389,13 +1390,24 @@ Responde SOLO con JSON válido con esta forma:
     if (!key) throw aiError('Falta la clave de API de Gemini. Péguela en Ajustes.');
     const prompt = buildPrompt(ctx, form, extra);
     const first = (model || 'gemini-flash-latest').trim();
-    const tries = [first, ...['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'].filter((m) => m !== first)];
-    let lastErr;
-    for (const mdl of tries) {
-      try { const data = await geminiOnce(key, mdl, prompt); return { ...toResult(data), model: mdl }; }
-      catch (e) { lastErr = e; if (e.code !== 404) throw e; }
+    // Si un modelo está saturado (503), sin cupo (429) o no existe (404), se prueba el siguiente.
+    const tries = [first, ...['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'].filter((m) => m !== first)];
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    let lastErr, best;
+    for (let i = 0; i < tries.length; i++) {
+      const mdl = tries[i];
+      for (let attempt = 0; attempt < (i === 0 ? 2 : 1); attempt++) {
+        try { const data = await geminiOnce(key, mdl, prompt); return { ...toResult(data), model: mdl }; }
+        catch (e) {
+          lastErr = e;
+          if (![404, 429, 503].includes(e.code)) throw e;
+          if (e.code !== 404) best = e;
+          if (e.code === 503 && attempt === 0 && i === 0) { await wait(1500); continue; }
+          break;
+        }
+      }
     }
-    throw lastErr;
+    throw best || lastErr;
   }
 
   /** IA generativa dentro de Claude (vista previa del artifact): no requiere clave. */
@@ -1997,7 +2009,7 @@ function vSettings() {
     <section class="sheet"><header><h3>Datos del dispositivo</h3></header><div class="body" id="wipe-zone">
       <p class="hint">${Object.keys(S.incidents).length} incidentes guardados en este dispositivo.</p>
       <div><button class="btn small danger" data-act="wipe-ask">Borrar todos los datos de la app</button></div></div></section>
-    <p class="note">Versión 1.1 · Funciona sin conexión una vez instalada · Ningún dato sale del dispositivo salvo cuando usted usa la IA generativa o el pronóstico del tiempo.</p>
+    <p class="note">Versión 1.1.1 · Funciona sin conexión una vez instalada · Ningún dato sale del dispositivo salvo cuando usted usa la IA generativa o el pronóstico del tiempo.</p>
   </div>`;
 }
 
