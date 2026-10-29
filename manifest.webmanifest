@@ -1,7 +1,7 @@
 {
-  "name": "SCI Campo – Formatos del Sistema Comando de Incidentes",
+  "name": "SCI Campo · Indo_Sea",
   "short_name": "SCI Campo",
-  "description": "Diligenciamiento de formatos SCI en campo, sin conexión, con asistente para objetivos, estrategias y tácticas.",
+  "description": "Formatos del Sistema Comando de Incidentes en campo, sin conexión, con asistente para objetivos, estrategias y tácticas. Desarrollado por Indo_Sea.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

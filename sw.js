@@ -1,6 +1,7 @@
+// SCI Campo · © 2026 Indo_Sea. Todos los derechos reservados.
 // SCI Campo: funcionamiento sin conexión.
 // Cambie VERSION cada vez que publique una actualización de index.html.
-const VERSION = 'sci-campo-v1.1.1';
+const VERSION = 'sci-campo-v1.2.0';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
